@@ -28,7 +28,7 @@ print("decimal: \(decimal)")
 print("zero: \(zero)")
 
 var max = UInt128.max
-var half = max / UInt128(2)
+var half = max / 100
 print("half: \(half)")
 
 max - half
@@ -40,6 +40,4 @@ print("half: \(half)")
 
 
 0x0011223344556677_8899AABBCCDDEEFF as UInt128
-
-0x0000_0000_0000_0000_FFFF_FFFF_FFFF_FFFF as UInt128
 0x4200_0000_0000_0000_FFFF_FFFF_FFFF_FFFF as UInt128

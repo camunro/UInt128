@@ -845,11 +845,14 @@ class EquatableTests : XCTestCase {
     }
 }
 
+@available(swift 5.8)
 class ExpressibleByIntegerLiteralTests : XCTestCase {
     func testInitWithIntegerLiteral() {
-        var tests = [(input: 0, result: UInt128())]
+        var tests = [(input: StaticBigInt(integerLiteral: 0x0), result: UInt128())]
+        
         tests.append((input: 1, result: UInt128(upperBits: 0, lowerBits: 1)))
-        tests.append((input: Int.max, result: UInt128(upperBits: 0, lowerBits: UInt64(Int.max))))
+        tests.append((input: StaticBigInt(integerLiteral: 0x0000_0000_0000_0000_FFFF_FFFF_FFFF_FFFF),
+                      result: UInt128(upperBits: 0, lowerBits: UInt64.max)))
 
         tests.forEach { test in
             XCTAssertEqual(UInt128(integerLiteral: test.input), test.result)
@@ -921,7 +924,7 @@ class CustomStringConvertibleTests : XCTestCase {
 
 }
 
-class CustomDebugStringConvertible : XCTestCase {
+class CustomDebugStringConvertibleTests : XCTestCase {
     func stringTests() -> [(input: UInt128, result: String)] {
         var tests = [(input: UInt128(),
                       result:"0")]

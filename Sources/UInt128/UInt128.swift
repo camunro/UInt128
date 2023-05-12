@@ -534,22 +534,6 @@ extension UInt128 : Hashable {
 // MARK: - Numeric Conformance
 
 extension UInt128 : Numeric {
-    public static func +(lhs: UInt128, rhs: UInt128) -> UInt128 {
-        precondition(~lhs >= rhs, "Addition overflow!")
-        let result = lhs.addingReportingOverflow(rhs)
-        return result.partialValue
-    }
-    public static func +=(lhs: inout UInt128, rhs: UInt128) {
-        lhs = lhs + rhs
-    }
-    public static func -(lhs: UInt128, rhs: UInt128) -> UInt128 {
-        precondition(lhs >= rhs, "Integer underflow")
-        let result = lhs.subtractingReportingOverflow(rhs)
-        return result.partialValue
-    }
-    public static func -=(lhs: inout UInt128, rhs: UInt128) {
-        lhs = lhs - rhs
-    }
     public static func *(lhs: UInt128, rhs: UInt128) -> UInt128 {
         let result = lhs.multipliedReportingOverflow(by: rhs)
         precondition(!result.overflow, "Multiplication overflow!")
@@ -572,11 +556,75 @@ extension UInt128 : Equatable {
     }
 }
 
+// MARK: - AdditiveArithmetic Conformance
+
+extension UInt128: AdditiveArithmetic {
+    public static var zero: Self { 0 }
+    
+    public static func +(lhs: UInt128, rhs: UInt128) -> UInt128 {
+        precondition(~lhs >= rhs, "Addition overflow!")
+        let result = lhs.addingReportingOverflow(rhs)
+        return result.partialValue
+    }
+    public static func +=(lhs: inout UInt128, rhs: UInt128) {
+        lhs = lhs + rhs
+    }
+    public static func -(lhs: UInt128, rhs: UInt128) -> UInt128 {
+        precondition(lhs >= rhs, "Integer underflow")
+        let result = lhs.subtractingReportingOverflow(rhs)
+        return result.partialValue
+    }
+    public static func -=(lhs: inout UInt128, rhs: UInt128) {
+        lhs = lhs - rhs
+    }
+}
+
+// MARK: - Sendable Conformance
+
+extension UInt128: Sendable {}
+
+
 // MARK: - ExpressibleByIntegerLiteral Conformance
 
-extension UInt128 : ExpressibleByIntegerLiteral {
+@available(iOS 16.4, macOS 13.3, tvOS 16.4, watchOS 9.4, *)
+extension UInt128: ExpressibleByIntegerLiteral {
+//#if compiler(<5.8)
+//    public typealias IntegerLiteralType = UInt64
+//
+//    public init(integerLiteral value: IntegerLiteralType) {
+//        self.init(upperBits: 0, lowerBits: value)
+//    }
+//#else
+    public typealias IntegerLiteralType = StaticBigInt
+//#endif
+    
+    
+    @available(iOS 16.4, macOS 13.3, tvOS 16.4, watchOS 9.4, *)
+    /// Creates an instance initialized to the specified unsigned integer value.
+    /// - parameter value: The value to create.
+    ///
+    /// StaticBigInt is primarily intended to be used as the associated type of an ExpressibleByIntegerLiteral conformance.
+    /// https://developer.apple.com/documentation/swift/staticbigint
     public init(integerLiteral value: IntegerLiteralType) {
-        self.init(upperBits: 0, lowerBits: UInt64(value))
+        precondition(
+            value.signum() >= 0 && value.bitWidth <= 1 + Self.bitWidth,
+            "integer overflow: '\(value)' as '\(Self.self)'"
+        )
+        
+        let upperBits = value.bitWidth > 64 ? UInt64(value[1]) : UInt64.zero
+        self.init(upperBits: upperBits, lowerBits: UInt64(value[0]))
+
+    }
+}
+
+// MARK: - XCode Playground Support
+
+extension UInt128: CustomPlaygroundDisplayConvertible {
+
+    /// Return the playground quick look representation of this integer as hexadecial.
+    public var playgroundDescription: Any {
+        let text = "0x" + String(self, radix: 16, uppercase: true)
+        return text + " (\(self.bitWidth) bits)"
     }
 }
 
@@ -607,17 +655,20 @@ extension UInt128 : CustomStringConvertible {
             return "0"
         }
 
+        let radix = UInt128(radix)
+        var index: String.Index
+        
         // Will store the final string result.
         var result = String()
 
         // Used as the check for indexing through UInt128 for string interpolation.
-        var divmodResult = (quotient: self, remainder: UInt128(0))
+        var divmodResult = (quotient: self, remainder: UInt128.zero)
         // Will hold the pool of possible values.
         let characterPool = uppercase ? "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" : "0123456789abcdefghijklmnopqrstuvwxyz"
         // Go through internal value until every base position is string(ed).
         repeat {
-            divmodResult = divmodResult.quotient.quotientAndRemainder(dividingBy: UInt128(radix))
-            let index = characterPool.index(characterPool.startIndex, offsetBy: Int(divmodResult.remainder))
+            divmodResult = divmodResult.quotient.quotientAndRemainder(dividingBy: radix)
+            index = characterPool.index(characterPool.startIndex, offsetBy: Int(truncatingIfNeeded: divmodResult.remainder.value.lowerBits))
             result.insert(characterPool[index], at: result.startIndex)
         } while divmodResult.quotient > 0
         return result

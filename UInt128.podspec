@@ -32,11 +32,11 @@ Pod::Spec.new do |spec|
   spec.source_files = 'Sources/*'
 
   # State supported version of the Swift library
-  spec.swift_version = "4.0"
+  spec.swift_version = "5.0"
 
   # OS deployment targets
-  spec.ios.deployment_target = "8.0"
-  spec.tvos.deployment_target = "9.0"
-  spec.osx.deployment_target = "10.9"
-  spec.watchos.deployment_target = "2.0"
+  spec.ios.deployment_target = "16.4"
+  spec.tvos.deployment_target = "16.4"
+  spec.osx.deployment_target = "13.3"
+  spec.watchos.deployment_target = "9.4"
 end
